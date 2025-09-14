@@ -1,32 +1,27 @@
 use crate::{
     database::types::{
         DbRequest,
+        GenericDatabase,
+        GenericDatabaseResponse,
         RequestKind,
     },
     log_err,
-    FANOUT,
 };
-
-use sled::Db;
 
 use tokio::sync::mpsc;
 
 /// Processes incoming requests from clients and returns responses
-pub async fn database_processing(
-    mut rax: mpsc::UnboundedReceiver<DbRequest>,
-    cache: Db<{ FANOUT }>,
+pub async fn database_processing<DB: GenericDatabase + std::fmt::Debug>(
+    mut rax: mpsc::UnboundedReceiver<DbRequest<DB>>,
+    cache: DB,
 ) {
     loop {
         while let Some(incoming) = rax.recv().await {
             let result = match incoming.request {
-                RequestKind::Read(k) => cache.get(k),
-                RequestKind::Write(k, v) => cache.insert(k, v),
-                RequestKind::Batch(b) => cache.apply_batch(b).map(|_| None),
-                RequestKind::Flush() => {
-                    // TODO: return proper stats!
-                    let _ = cache.flush().unwrap();
-                    Ok(None)
-                }
+                RequestKind::Read(k) => cache.read(k).map(GenericDatabaseResponse::Read),
+                RequestKind::Write(kv) => cache.write(kv).map(GenericDatabaseResponse::Write),
+                RequestKind::Batch(b) => cache.batch(b).map(GenericDatabaseResponse::Batch),
+                RequestKind::Flush(a) => cache.flush(a).map(GenericDatabaseResponse::Flush),
             };
 
             if result.is_err() {
@@ -35,7 +30,7 @@ pub async fn database_processing(
                 continue;
             }
 
-            let _ = incoming.sender.send(result.unwrap());
+            let _ = incoming.sender.send(result.ok());
         }
     }
 }
@@ -78,7 +73,7 @@ macro_rules! db_insert {
         $v:expr
     ) => {{
         let (tx, rx) = oneshot::channel();
-        let req = DbRequest::new(RequestKind::Write($k, $v), tx);
+        let req = DbRequest::new(RequestKind::Write(($k, $v)), tx);
 
         let _ = $channel.send(req);
 
@@ -114,7 +109,8 @@ macro_rules! db_batch {
 #[macro_export]
 macro_rules! db_flush {
     (
-        $channel:expr
+        $channel:expr,
+        $data:expr
     ) => {{
         use $crate::database::types::{
             DbRequest,
@@ -124,7 +120,7 @@ macro_rules! db_flush {
         use tokio::sync::oneshot;
 
         let (tx, rx) = oneshot::channel();
-        let req = DbRequest::new(RequestKind::Flush(), tx);
+        let req = DbRequest::new(RequestKind::Flush($data), tx);
 
         let _ = $channel.send(req);
 

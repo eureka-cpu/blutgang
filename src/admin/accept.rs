@@ -4,7 +4,10 @@ use crate::{
         accept_readiness_request,
         LiveReadyRequestSnd,
     },
-    database::types::RequestBus,
+    database::types::{
+        GenericDatabase,
+        RequestBus,
+    },
     log_info,
 };
 use http_body_util::Full;
@@ -94,11 +97,11 @@ macro_rules! get_response {
 }
 
 /// Execute request and construct a HTTP response
-async fn forward_body(
+async fn forward_body<DB: GenericDatabase>(
     mut tx: Value,
     rpc_list_rwlock: &Arc<RwLock<Vec<Rpc>>>,
     poverty_list_rwlock: &Arc<RwLock<Vec<Rpc>>>,
-    cache: RequestBus,
+    cache: RequestBus<DB>,
     config: Arc<RwLock<Settings>>,
 ) -> Result<hyper::Response<Full<Bytes>>, Infallible> {
     // Get the id of the request and set it to 0 for caching
@@ -124,11 +127,11 @@ async fn forward_body(
 }
 
 /// Accept admin request, self explanatory
-pub async fn accept_admin_request(
+pub async fn accept_admin_request<DB: GenericDatabase>(
     tx: Request<hyper::body::Incoming>,
     rpc_list_rwlock: Arc<RwLock<Vec<Rpc>>>,
     poverty_list_rwlock: Arc<RwLock<Vec<Rpc>>>,
-    cache: RequestBus,
+    cache: RequestBus<DB>,
     config: Arc<RwLock<Settings>>,
     liveness_request_tx: LiveReadyRequestSnd,
 ) -> Result<hyper::Response<Full<Bytes>>, Infallible> {
@@ -192,6 +195,7 @@ pub async fn accept_admin_request(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::database::types::GenericDatabase;
     use crate::database_processing;
     use jsonwebtoken::DecodingKey;
     use sled::Config;
@@ -207,7 +211,7 @@ mod tests {
     }
 
     // Helper function to create a test cache
-    fn create_test_cache() -> RequestBus {
+    fn create_test_cache<DB: GenericDatabase>() -> RequestBus<DB> {
         let cache = Config::tmp().unwrap();
         let cache = Db::open_with_config(&cache).unwrap();
         let (db_tx, db_rx) = mpsc::unbounded_channel();

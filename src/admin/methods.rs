@@ -1,6 +1,9 @@
 use crate::{
     admin::error::AdminError,
-    database::types::RequestBus,
+    database::types::{
+        GenericDatabase,
+        RequestBus,
+    },
     db_flush,
     Rpc,
     Settings,
@@ -21,12 +24,12 @@ use serde_json::{
 };
 
 /// Extract the method, call the appropriate function and return the response
-pub async fn execute_method(
+pub async fn execute_method<DB: GenericDatabase>(
     tx: Value,
     rpc_list: &Arc<RwLock<Vec<Rpc>>>,
     poverty_list: &Arc<RwLock<Vec<Rpc>>>,
     config: Arc<RwLock<Settings>>,
-    cache: RequestBus,
+    cache: RequestBus<DB>,
 ) -> Result<Value, AdminError> {
     let method = tx["method"].as_str();
     println!("Method: {:?}", method.unwrap_or("None"));
@@ -104,18 +107,22 @@ pub async fn execute_method(
 /// Quit Blutgang upon receiving this method
 /// We're returning a Null and allowing unreachable code so rustc doesnt cry
 #[allow(unreachable_code)]
-async fn admin_blutgang_quit(cache: RequestBus) -> Result<Value, AdminError> {
+async fn admin_blutgang_quit<DB: GenericDatabase>(
+    cache: RequestBus<DB>,
+) -> Result<Value, AdminError> {
     // We're doing something not-good so flush everything to disk
-    let _ = db_flush!(cache);
+    let _ = db_flush!(cache, ());
 
     std::process::exit(0);
     Ok(Value::Null)
 }
 
 /// Flushes sled cache to disk
-async fn admin_flush_cache(cache: RequestBus) -> Result<Value, AdminError> {
+async fn admin_flush_cache<DB: GenericDatabase>(
+    cache: RequestBus<DB>,
+) -> Result<Value, AdminError> {
     let time = Instant::now();
-    let _ = db_flush!(cache);
+    let _ = db_flush!(cache, ());
     let time = time.elapsed();
 
     let rx = json!({
@@ -422,7 +429,7 @@ mod tests {
     }
 
     // Helper function to create a test cache
-    fn create_test_cache() -> RequestBus {
+    fn create_test_cache<DB: GenericDatabase>() -> RequestBus<DB> {
         let cache = Config::tmp().unwrap();
         let cache = Db::open_with_config(&cache).unwrap();
         let (db_tx, db_rx) = mpsc::unbounded_channel();

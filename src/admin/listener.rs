@@ -15,7 +15,10 @@ use crate::{
             LiveReadyUpdateRecv,
         },
     },
-    database::types::RequestBus,
+    database::types::{
+        GenericDatabase,
+        RequestBus,
+    },
     log_info,
     Rpc,
     Settings,
@@ -64,10 +67,10 @@ macro_rules! accept_admin {
     };
 }
 
-async fn admin_api_server(
+async fn admin_api_server<DB: GenericDatabase + 'static>(
     rpc_list_rwlock: Arc<RwLock<Vec<Rpc>>>,
     poverty_list_rwlock: Arc<RwLock<Vec<Rpc>>>,
-    cache: RequestBus,
+    cache: RequestBus<DB>,
     config: Arc<RwLock<Settings>>,
     address: SocketAddr,
     liveness_request_tx: LiveReadyRequestSnd,
@@ -108,10 +111,10 @@ async fn admin_api_server(
 /// Also used for k8s liveness/readiness probes.
 ///
 /// Similar to what you'd find in main/balancer
-pub async fn listen_for_admin_requests(
+pub async fn listen_for_admin_requests<DB: GenericDatabase + 'static>(
     rpc_list_rwlock: Arc<RwLock<Vec<Rpc>>>,
     poverty_list_rwlock: Arc<RwLock<Vec<Rpc>>>,
-    cache: RequestBus,
+    cache: RequestBus<DB>,
     config: Arc<RwLock<Settings>>,
     liveness_receiver: LiveReadyUpdateRecv,
 ) -> Result<(), Box<dyn std::error::Error>> {

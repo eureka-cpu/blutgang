@@ -8,6 +8,7 @@ use crate::{
     },
     database::types::{
         DbRequest,
+        GenericDatabase,
         RequestBus,
         RequestKind,
     },
@@ -26,6 +27,7 @@ use std::{
     time::Duration,
 };
 
+use sled::InlineArray;
 use tokio::sync::{
     oneshot,
     watch,
@@ -36,14 +38,14 @@ use serde_json::Value;
 use simd_json::to_vec;
 
 #[derive(Clone)]
-pub struct CacheArgs {
+pub struct CacheArgs<DB: GenericDatabase> {
     pub finalized_rx: watch::Receiver<u64>,
     pub named_numbers: Arc<RwLock<NamedBlocknumbers>>,
     pub head_cache: Arc<RwLock<BTreeMap<u64, Vec<String>>>>,
-    pub cache: RequestBus,
+    pub cache: RequestBus<DB>,
 }
 
-impl CacheArgs {
+impl<DB: GenericDatabase> CacheArgs<DB> {
     #[cfg(test)]
     /// **Note:** This should only be used for testing!
     pub fn default() -> Self {
@@ -80,7 +82,12 @@ pub fn can_cache(method: &str, result: &str) -> bool {
 }
 
 /// Check if we should cache the querry, and if so cache it in the DB
-pub fn cache_querry(rx: &mut str, method: Value, tx_hash: Hash, cache_args: &CacheArgs) {
+pub fn cache_querry<DB: GenericDatabase<WriteArgs = (Vec<u8>, InlineArray)>>(
+    rx: &mut str,
+    method: Value,
+    tx_hash: Hash,
+    cache_args: &CacheArgs<DB>,
+) {
     let tx_string = method.to_string();
 
     if can_cache(&tx_string, rx) {
@@ -142,7 +149,11 @@ pub fn update_rpc_latency(rpc_list: &Arc<RwLock<Vec<Rpc>>>, rpc_position: usize,
 
 #[cfg(test)]
 mod tests {
-    use crate::db_get;
+    use crate::{
+        config::system::FANOUT,
+        database::types::GenericDatabaseResponse,
+        db_get,
+    };
     use serde_json::json;
 
     use super::*;
@@ -163,7 +174,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cache_querry() {
-        let cache_args = CacheArgs::default();
+        let cache_args = CacheArgs::<sled::Db<{ FANOUT }>>::default();
         let mut rx = r#"{"jsonrpc":"2.0","result":"0x1","id":1}"#.to_string();
         let method = json!({"method": "eth_getBlockByNumber", "params": ["0x10", false]});
         let tx_hash = blake3::hash(method.to_string().as_bytes());
@@ -173,7 +184,10 @@ mod tests {
         let cached_value = db_get!(cache_args.cache, tx_hash.as_bytes().to_vec())
             .unwrap()
             .unwrap();
-        let cached_str = std::str::from_utf8(&cached_value).unwrap();
+        let GenericDatabaseResponse::Read(cached_value) = cached_value else {
+            panic!("expected read value");
+        };
+        let cached_str = std::str::from_utf8(cached_value.as_ref().unwrap()).unwrap();
         assert_eq!(cached_str, r#"{"id":null,"jsonrpc":"2.0","result":"0x1"}"#);
     }
 

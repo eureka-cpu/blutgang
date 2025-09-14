@@ -3,6 +3,7 @@ use crate::{
         error::DbError,
         types::{
             DbRequest,
+            GenericDatabase,
             RequestBus,
             RequestKind,
         },
@@ -29,11 +30,11 @@ use tokio_stream::{
 };
 
 /// Check if we need to do a reorg or if a new block has finalized.
-pub async fn manage_cache(
+pub async fn manage_cache<DB: GenericDatabase<BatchArgs = Batch>>(
     head_cache: &Arc<RwLock<BTreeMap<u64, Vec<String>>>>,
     blocknum_rx: tokio::sync::watch::Receiver<u64>,
     finalized_rx: Arc<tokio::sync::watch::Receiver<u64>>,
-    cache: RequestBus,
+    cache: RequestBus<DB>,
 ) -> Result<(), DbError> {
     let mut block_number = 0;
     let mut last_finalized = 0;
@@ -68,11 +69,11 @@ pub async fn manage_cache(
 /// We use the head_cache to store keys of querries we made near the tip
 /// If a reorg happens, we need to remove all querries in the reorg range
 /// from the sled database.
-fn handle_reorg(
+fn handle_reorg<DB: GenericDatabase<BatchArgs = Batch>>(
     head_cache: &Arc<RwLock<BTreeMap<u64, Vec<String>>>>,
     block_number: u64,
     new_block: u64,
-    cache: RequestBus,
+    cache: RequestBus<DB>,
 ) -> Result<(), DbError> {
     // sled batch
     let mut batch = Batch::default();

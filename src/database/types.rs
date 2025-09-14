@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use sled::InlineArray;
 use tokio::sync::{
     mpsc,
@@ -8,28 +10,98 @@ use tokio::sync::{
 ///
 /// The enclosing struct contains the request and a oneshot sender
 /// for sending back a response.
-pub type RequestBus = mpsc::UnboundedSender<DbRequest>;
-pub type RequestSender = oneshot::Sender<Option<InlineArray>>;
+pub type RequestBus<DB: GenericDatabase> = mpsc::UnboundedSender<DbRequest<DB>>;
+pub type RequestSender<DB: GenericDatabase> = oneshot::Sender<Option<GenericDatabaseResponse<DB>>>;
 // pub type RequestReceiver = oneshot::Receiver<Option<InlineArray>>;
+
+/// A generic database layer abstraction.
+pub trait GenericDatabase: Send {
+    type Error: Debug;
+
+    type ReadArgs: Debug + Send;
+    type ReadReceipt: Debug + Send;
+
+    type WriteArgs: Debug + Send;
+    type WriteReceipt: Debug + Send;
+
+    type BatchArgs: Debug + Send;
+    type BatchReceipt: Debug + Send;
+
+    type FlushArgs: Debug + Send;
+    type FlushReceipt: Debug + Send;
+
+    /// A database read operation.
+    fn read(&self, args: Self::ReadArgs) -> Result<Self::ReadReceipt, Self::Error>;
+
+    /// A database write operation.
+    fn write(&self, args: Self::WriteArgs) -> Result<Self::WriteReceipt, Self::Error>;
+
+    /// A database batch operation.
+    fn batch(&self, args: Self::BatchArgs) -> Result<Self::BatchReceipt, Self::Error>;
+
+    /// A database flush operation.
+    fn flush(&self, args: Self::FlushArgs) -> Result<Self::FlushReceipt, Self::Error>;
+}
+
+impl GenericDatabase for sled::Db<{ crate::FANOUT }> {
+    type Error = std::io::Error;
+
+    type ReadArgs = Vec<u8>;
+    type ReadReceipt = Option<sled::InlineArray>;
+
+    type WriteArgs = (Vec<u8>, InlineArray);
+    type WriteReceipt = Option<sled::InlineArray>;
+
+    type BatchArgs = sled::Batch;
+    type BatchReceipt = ();
+
+    type FlushArgs = ();
+    type FlushReceipt = sled::FlushStats;
+
+    fn read(&self, key: Self::ReadArgs) -> Result<Self::ReadReceipt, Self::Error> {
+        self.get(key)
+    }
+
+    fn write(&self, kv: Self::WriteArgs) -> Result<Self::WriteReceipt, Self::Error> {
+        let (key, value) = kv;
+        self.insert(key, value)
+    }
+
+    fn batch(&self, batch: Self::BatchArgs) -> Result<Self::BatchReceipt, Self::Error> {
+        self.apply_batch(batch)
+    }
+
+    fn flush(&self, _args: Self::FlushArgs) -> Result<Self::FlushReceipt, Self::Error> {
+        sled::Tree::<{ crate::FANOUT }>::flush(self)
+    }
+}
+
+#[derive(Debug)]
+pub enum GenericDatabaseResponse<DB: GenericDatabase> {
+    Read(DB::ReadReceipt),
+    Write(DB::WriteReceipt),
+    Batch(DB::BatchReceipt),
+    Flush(DB::FlushReceipt),
+}
 
 /// Specifies if we are reading or writing to the DB.
 #[derive(Debug)]
-pub enum RequestKind {
-    Read(Vec<u8>),
-    Write(Vec<u8>, InlineArray),
-    Batch(sled::Batch),
-    Flush(),
+pub enum RequestKind<DB: GenericDatabase> {
+    Read(DB::ReadArgs),
+    Write(DB::WriteArgs),
+    Batch(DB::BatchArgs),
+    Flush(DB::FlushArgs),
 }
 
 /// Contains data to be sent to the DB thread for processing.
 #[derive(Debug)]
-pub struct DbRequest {
-    pub request: RequestKind,
-    pub sender: RequestSender,
+pub struct DbRequest<DB: GenericDatabase> {
+    pub request: RequestKind<DB>,
+    pub sender: RequestSender<DB>,
 }
 
-impl DbRequest {
-    pub fn new(request: RequestKind, sender: RequestSender) -> Self {
+impl<DB: GenericDatabase> DbRequest<DB> {
+    pub fn new(request: RequestKind<DB>, sender: RequestSender<DB>) -> Self {
         DbRequest { request, sender }
     }
 }
