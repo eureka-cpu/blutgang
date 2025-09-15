@@ -6,6 +6,7 @@ use crate::{
             cache_result,
         },
     },
+    config::system::FANOUT,
     database::types::{
         DbRequest,
         GenericDatabase,
@@ -45,7 +46,7 @@ pub struct CacheArgs<DB: GenericDatabase> {
     pub cache: RequestBus<DB>,
 }
 
-impl<DB: GenericDatabase> CacheArgs<DB> {
+impl CacheArgs<sled::Db<{ FANOUT }>> {
     #[cfg(test)]
     /// **Note:** This should only be used for testing!
     pub fn default() -> Self {
