@@ -160,19 +160,34 @@ mod tests {
         let result = handle_reorg(&head_cache, 2, 3, db_tx.clone());
 
         // Verify the result and check if the data is removed from the cache
-        assert!(result.is_ok());
-        let head_cache_guard = head_cache.read().unwrap();
-        assert!(head_cache_guard.contains_key(&1));
-        assert!(!head_cache_guard.contains_key(&2));
-        assert!(!head_cache_guard.contains_key(&3));
+        assert!(result.is_ok(), "handle_reorg failed");
+        let head_cache_guard = head_cache.read().expect("failed to read head cache");
+        assert!(
+            head_cache_guard.contains_key(&1),
+            "head cache does not contain key1"
+        );
+        assert!(
+            !head_cache_guard.contains_key(&2),
+            "head cache should not contain key2"
+        );
+        assert!(
+            !head_cache_guard.contains_key(&3),
+            "head cache should not contain key3"
+        );
 
         // Check if the data is removed from the cache
         let key1 = db_get!(db_tx.clone(), "key1".into()).unwrap();
-        assert!(key1.is_some());
+        assert!(key1.is_some(), "failed to get key1 from db");
         let key2 = db_get!(db_tx.clone(), "key2".into()).unwrap();
-        assert!(key2.is_none());
+        assert!(
+            key2.is_none(),
+            "successfully got key2 from db which should have failed"
+        );
         let key3 = db_get!(db_tx.clone(), "key3".into()).unwrap();
-        assert!(key3.is_none());
+        assert!(
+            key3.is_none(),
+            "successfully got key3 from db which should have failed"
+        );
     }
 
     #[test]
