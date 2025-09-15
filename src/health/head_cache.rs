@@ -134,6 +134,7 @@ mod tests {
     use tokio::sync::mpsc;
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_handle_reorg() {
         // Create test data and resources
         let head_cache = Arc::new(RwLock::new(BTreeMap::new()));

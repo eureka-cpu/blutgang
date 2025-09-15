@@ -226,6 +226,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_forward_body() {
         let settings = create_test_settings();
         let cache = create_test_cache::<TestDb>();

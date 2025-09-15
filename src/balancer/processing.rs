@@ -74,6 +74,8 @@ impl CacheArgs<sled::Db<{ FANOUT }>> {
     }
 }
 
+// TODO: @eureka-cpu -- The method can be an enum and impl FromStr to avoid this:
+//
 // TODO: we should find a way to check values directly and not convert Value to str
 pub fn can_cache(method: &str, result: &str) -> bool {
     if (cache_method(method)) && (cache_result(result)) {
@@ -82,7 +84,7 @@ pub fn can_cache(method: &str, result: &str) -> bool {
     false
 }
 
-/// Check if we should cache the querry, and if so cache it in the DB
+/// Check if we should cache the query, and if so cache it in the DB
 pub fn cache_query<DB: GenericDatabase<WriteArgs = (Vec<u8>, InlineArray)>>(
     rx: &mut str,
     method: Value,
@@ -176,7 +178,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_cache_querry() {
+    #[serial_test::serial]
+    async fn test_cache_query() {
         let cache_args = CacheArgs::<TestDb>::default();
         let mut rx = r#"{"jsonrpc":"2.0","result":"0x1","id":1}"#.to_string();
         let method = json!({"method": "eth_getBlockByNumber", "params": ["0x10", false]});
@@ -195,7 +198,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_cache_infura_error_querry() {
+    #[serial_test::serial]
+    async fn test_cache_infura_error_query() {
         let cache_args = CacheArgs::<TestDb>::default();
         let mut rx = r#"{ "code": -32005, "data": { "see": "https://infura.io/dashboard" }, "message": "daily request count exceeded, request rate limited" }, payload={ "id": 12449, "jsonrpc": "2.0", "method": "eth_blockNumber", "params": [  ] }"#.to_string();
         let method = json!({"method": "eth_getBlockByNumber", "params": ["0x10", false]});

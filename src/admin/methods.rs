@@ -442,6 +442,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_execute_method_blutgang_rpc_list() {
         // Arrange
         let cache = create_test_cache();
@@ -462,6 +463,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_execute_method_blutgang_flush_cache() {
         // Arrange
         let cache = create_test_cache();
@@ -482,6 +484,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_execute_method_blutgang_config() {
         // Arrange
         let cache = create_test_cache();
@@ -502,6 +505,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_execute_method_blutgang_poverty_list() {
         // Arrange
         let cache = create_test_cache();
@@ -522,6 +526,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_execute_method_blutgang_ttl() {
         // Arrange
         let cache = create_test_cache();
@@ -542,6 +547,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_execute_method_blutgang_health_check_ttl() {
         // Arrange
         let cache = create_test_cache();
@@ -562,6 +568,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_execute_method_invalid_method() {
         // Arrange
         let cache = create_test_cache();
@@ -582,6 +589,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_execute_method_add_to_rpc_list() {
         // Arrange
         let cache = create_test_cache();
@@ -606,6 +614,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_execute_method_add_to_rpc_list_no_ws() {
         // Arrange
         let cache = create_test_cache();
@@ -630,6 +639,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_execute_method_remove_from_rpc_list() {
         // Arrange
         let cache = create_test_cache();
@@ -680,6 +690,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_execute_method_blutgang_set_ttl() {
         // Arrange
         let cache = create_test_cache();
@@ -705,6 +716,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_execute_method_blutgang_set_health_check_ttl() {
         // Arrange
         let cache = create_test_cache();
@@ -730,6 +742,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_rw_protection() {
         // Arrange
         let cache = create_test_cache();

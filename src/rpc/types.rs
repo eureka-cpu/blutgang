@@ -36,7 +36,7 @@ pub struct Rpc {
     pub max_consecutive: u32, // max times we can call an rpc in a row
     pub consecutive: u32,
     // For max_per_second
-    pub last_used: u128,      // last time we sent a querry to this node
+    pub last_used: u128,      // last time we sent a query to this node
     pub min_time_delta: u128, // microseconds
 }
 
