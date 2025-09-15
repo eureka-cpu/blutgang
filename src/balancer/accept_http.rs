@@ -12,6 +12,7 @@ use crate::{
         selection::select::pick,
     },
     cache_error,
+    database::types::GenericDatabase,
     db_get,
     log_err,
     log_info,
@@ -32,6 +33,7 @@ use crate::{
     WsconnMessage,
 };
 
+use sled::InlineArray;
 use tokio::sync::{
     broadcast,
     mpsc,
@@ -282,10 +284,12 @@ macro_rules! fetch_from_rpc {
 
 /// Pick RPC and send request to it. In case the result is cached,
 /// read and return from the cache.
-pub async fn forward_body(
+pub async fn forward_body<
+    DB: GenericDatabase<ReadArgs = Vec<u8>, WriteArgs = (Vec<u8>, InlineArray)>,
+>(
     tx: Request<hyper::body::Incoming>,
     con_params: &ConnectionParams,
-    cache_args: CacheArgs,
+    cache_args: CacheArgs<DB>,
     params: RequestParams,
 ) -> (
     Result<hyper::Response<Full<Bytes>>, Infallible>,
@@ -367,10 +371,10 @@ pub async fn forward_body(
 /// Measures the time needed for a request, and updates the respective
 /// RPC lself.
 /// In case of a timeout, returns an error.
-pub async fn accept_request(
+pub async fn accept_request<DB: GenericDatabase>(
     mut tx: Request<hyper::body::Incoming>,
     connection_params: ConnectionParams,
-    cache_args: CacheArgs,
+    cache_args: CacheArgs<DB>,
 ) -> Result<hyper::Response<Full<Bytes>>, Infallible> {
     // Check if the request is a websocket upgrade request.
     if is_upgrade_request(&tx) {
