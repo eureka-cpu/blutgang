@@ -2,11 +2,15 @@ use crate::{
     balancer::{
         format::replace_block_tags,
         processing::{
-            cache_querry,
+            cache_query,
             update_rpc_latency,
             CacheArgs,
         },
         selection::select::pick,
+    },
+    database::types::{
+        GenericDatabase,
+        GenericDatabaseResponse,
     },
     db_get,
     log_err,
@@ -42,6 +46,7 @@ use simd_json::{
     from_str,
 };
 
+use sled::InlineArray;
 use tokio::sync::{
     broadcast,
     mpsc,
@@ -278,13 +283,19 @@ pub async fn ws_conn(
 ///
 /// Contains logic for retreiving from cache, sending to the internal
 /// WS pipeline, retreiving and returning received responses.
-pub async fn execute_ws_call(
+pub async fn execute_ws_call<
+    DB: GenericDatabase<
+        WriteArgs = (Vec<u8>, InlineArray),
+        ReadArgs = Vec<u8>,
+        ReadReceipt = Option<InlineArray>,
+    >,
+>(
     mut call: Value,
     user_id: u32,
     incoming_tx: &mpsc::UnboundedSender<WsconnMessage>,
     broadcast_rx: broadcast::Receiver<IncomingResponse>,
     sub_data: &Arc<SubscriptionData>,
-    cache_args: &CacheArgs,
+    cache_args: &CacheArgs<DB>,
 ) -> Result<String, WsError> {
     #[cfg(feature = "debug-verbose")]
     println!(
@@ -304,7 +315,9 @@ pub async fn execute_ws_call(
         }
     };
 
-    if let Ok(Some(mut rax)) = db_get!(cache_args.cache, tx_hash.as_bytes().to_vec()) {
+    if let Ok(Some(GenericDatabaseResponse::Read(Some(mut rax)))) =
+        db_get!(cache_args.cache, tx_hash.as_bytes().to_vec())
+    {
         let mut cached: Value = from_slice(rax.make_mut()).unwrap();
         cached["id"] = id;
         return Ok(cached.to_string());
@@ -383,7 +396,7 @@ pub async fn execute_ws_call(
         sub_data.register_subscription(call.clone(), sub_id.clone(), response.node_id);
         sub_data.subscribe_user(user_id, call)?;
     } else {
-        cache_querry(&mut response.content.to_string(), call, tx_hash, cache_args);
+        cache_query(&mut response.content.to_string(), call, tx_hash, cache_args);
     }
 
     response.content["id"] = id;

@@ -82,7 +82,7 @@ pub fn can_cache(method: &str, result: &str) -> bool {
 }
 
 /// Check if we should cache the querry, and if so cache it in the DB
-pub fn cache_querry<DB: GenericDatabase<WriteArgs = (Vec<u8>, InlineArray)>>(
+pub fn cache_query<DB: GenericDatabase<WriteArgs = (Vec<u8>, InlineArray)>>(
     rx: &mut str,
     method: Value,
     tx_hash: Hash,
@@ -158,6 +158,8 @@ mod tests {
 
     use super::*;
 
+    type TestDb = sled::Db<{ FANOUT }>;
+
     #[test]
     fn test_can_cache() {
         assert!(can_cache("eth_getBlockByNumber", r#"{"result": "0x1"}"#));
@@ -174,12 +176,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_cache_querry() {
-        let cache_args = CacheArgs::<sled::Db<{ FANOUT }>>::default();
+        let cache_args = CacheArgs::<TestDb>::default();
         let mut rx = r#"{"jsonrpc":"2.0","result":"0x1","id":1}"#.to_string();
         let method = json!({"method": "eth_getBlockByNumber", "params": ["0x10", false]});
         let tx_hash = blake3::hash(method.to_string().as_bytes());
 
-        cache_querry(&mut rx, method.clone(), tx_hash, &cache_args);
+        cache_query(&mut rx, method.clone(), tx_hash, &cache_args);
 
         let cached_value = db_get!(cache_args.cache, tx_hash.as_bytes().to_vec())
             .unwrap()
@@ -193,15 +195,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_cache_infura_error_querry() {
-        let cache_args = CacheArgs::default();
+        let cache_args = CacheArgs::<TestDb>::default();
         let mut rx = r#"{ "code": -32005, "data": { "see": "https://infura.io/dashboard" }, "message": "daily request count exceeded, request rate limited" }, payload={ "id": 12449, "jsonrpc": "2.0", "method": "eth_blockNumber", "params": [  ] }"#.to_string();
         let method = json!({"method": "eth_getBlockByNumber", "params": ["0x10", false]});
         let tx_hash = blake3::hash(method.to_string().as_bytes());
 
-        cache_querry(&mut rx, method.clone(), tx_hash, &cache_args);
+        cache_query(&mut rx, method.clone(), tx_hash, &cache_args);
 
         let cached_value = db_get!(cache_args.cache, tx_hash.as_bytes().to_vec()).unwrap();
-        assert_eq!(cached_value, None);
+        assert!(cached_value.is_none());
     }
 
     #[tokio::test]

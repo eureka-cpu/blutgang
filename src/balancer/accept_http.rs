@@ -5,7 +5,7 @@ use crate::{
             replace_block_tags,
         },
         processing::{
-            cache_querry,
+            cache_query,
             update_rpc_latency,
             CacheArgs,
         },
@@ -180,7 +180,7 @@ macro_rules! get_response {
         $max_retries:expr
     ) => {
         match db_get!($cache_args.cache, $tx_hash.as_bytes().to_vec()) {
-            Ok(Some(mut rax)) => {
+            Ok(Some($crate::database::types::GenericDatabaseResponse::Read(Some(mut rax)))) => {
                 $rpc_position = None;
                 // Reconstruct ID
                 let mut cached: Value = simd_json::serde::from_slice(rax.make_mut()).unwrap();
@@ -188,7 +188,7 @@ macro_rules! get_response {
                 cached["id"] = $id.into();
                 cached.to_string()
             }
-            Ok(None) => {
+            Ok(_) => {
                 fetch_from_rpc!(
                     $tx,
                     $cache_args,
@@ -271,7 +271,7 @@ macro_rules! fetch_from_rpc {
         }
 
         // Don't cache responses that contain errors or missing trie nodes
-        cache_querry(
+        cache_query(
             &mut rx,
             $tx,
             $tx_hash,
@@ -285,7 +285,11 @@ macro_rules! fetch_from_rpc {
 /// Pick RPC and send request to it. In case the result is cached,
 /// read and return from the cache.
 pub async fn forward_body<
-    DB: GenericDatabase<ReadArgs = Vec<u8>, WriteArgs = (Vec<u8>, InlineArray)>,
+    DB: GenericDatabase<
+        ReadArgs = Vec<u8>,
+        WriteArgs = (Vec<u8>, InlineArray),
+        ReadReceipt = Option<InlineArray>,
+    >,
 >(
     tx: Request<hyper::body::Incoming>,
     con_params: &ConnectionParams,
@@ -371,7 +375,13 @@ pub async fn forward_body<
 /// Measures the time needed for a request, and updates the respective
 /// RPC lself.
 /// In case of a timeout, returns an error.
-pub async fn accept_request<DB: GenericDatabase>(
+pub async fn accept_request<
+    DB: GenericDatabase<
+            ReadArgs = Vec<u8>,
+            WriteArgs = (Vec<u8>, InlineArray),
+            ReadReceipt = Option<InlineArray>,
+        > + 'static,
+>(
     mut tx: Request<hyper::body::Incoming>,
     connection_params: ConnectionParams,
     cache_args: CacheArgs<DB>,

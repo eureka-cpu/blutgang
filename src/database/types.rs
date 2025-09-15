@@ -10,8 +10,8 @@ use tokio::sync::{
 ///
 /// The enclosing struct contains the request and a oneshot sender
 /// for sending back a response.
-pub type RequestBus<DB: GenericDatabase> = mpsc::UnboundedSender<DbRequest<DB>>;
-pub type RequestSender<DB: GenericDatabase> = oneshot::Sender<Option<GenericDatabaseResponse<DB>>>;
+pub type RequestBus<DB> = mpsc::UnboundedSender<DbRequest<DB>>;
+pub type RequestSender<DB> = oneshot::Sender<Option<GenericDatabaseResponse<DB>>>;
 // pub type RequestReceiver = oneshot::Receiver<Option<InlineArray>>;
 
 /// A generic database layer abstraction.

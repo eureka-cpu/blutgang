@@ -67,7 +67,7 @@ macro_rules! accept_admin {
     };
 }
 
-async fn admin_api_server<DB: GenericDatabase + 'static>(
+async fn admin_api_server<DB: GenericDatabase<FlushArgs = ()> + 'static>(
     rpc_list_rwlock: Arc<RwLock<Vec<Rpc>>>,
     poverty_list_rwlock: Arc<RwLock<Vec<Rpc>>>,
     cache: RequestBus<DB>,
@@ -111,7 +111,7 @@ async fn admin_api_server<DB: GenericDatabase + 'static>(
 /// Also used for k8s liveness/readiness probes.
 ///
 /// Similar to what you'd find in main/balancer
-pub async fn listen_for_admin_requests<DB: GenericDatabase + 'static>(
+pub async fn listen_for_admin_requests<DB: GenericDatabase<FlushArgs = ()> + 'static>(
     rpc_list_rwlock: Arc<RwLock<Vec<Rpc>>>,
     poverty_list_rwlock: Arc<RwLock<Vec<Rpc>>>,
     cache: RequestBus<DB>,

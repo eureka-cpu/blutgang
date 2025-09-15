@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     balancer::processing::CacheArgs,
+    database::types::GenericDatabase,
     log_info,
     websocket::{
         client::execute_ws_call,
@@ -17,6 +18,7 @@ use crate::{
 
 use rand::random;
 
+use sled::InlineArray;
 use tokio::sync::{
     broadcast,
     mpsc,
@@ -36,12 +38,18 @@ use tungstenite::Message;
 ///
 /// Opens a WebSocket connection between Blutgang and a client,
 /// sending their requests to be processed.
-pub async fn serve_websocket(
+pub async fn serve_websocket<
+    DB: GenericDatabase<
+            ReadArgs = Vec<u8>,
+            WriteArgs = (Vec<u8>, InlineArray),
+            ReadReceipt = Option<InlineArray>,
+        > + 'static,
+>(
     websocket: HyperWebsocket,
     incoming_tx: mpsc::UnboundedSender<WsconnMessage>,
     outgoing_rx: broadcast::Receiver<IncomingResponse>,
     sub_data: Arc<SubscriptionData>,
-    cache_args: CacheArgs,
+    cache_args: CacheArgs<DB>,
 ) -> Result<(), WsError> {
     let websocket = websocket.await?;
 

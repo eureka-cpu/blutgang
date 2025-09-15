@@ -1,6 +1,7 @@
 use crate::{
     balancer::processing::CacheArgs,
     config::system::WS_HEALTH_CHECK_USER_ID,
+    database::types::GenericDatabase,
     log_err,
     log_info,
     log_wrn,
@@ -30,6 +31,7 @@ use std::sync::{
 
 use serde_json::Value;
 
+use sled::InlineArray;
 use tokio::{
     sync::{
         broadcast,
@@ -157,12 +159,18 @@ pub async fn get_safe_block(
 }
 
 /// Send a message subscribing to newHeads
-async fn send_newheads_sub_message(
+async fn send_newheads_sub_message<
+    DB: GenericDatabase<
+        ReadArgs = Vec<u8>,
+        WriteArgs = (Vec<u8>, InlineArray),
+        ReadReceipt = Option<InlineArray>,
+    >,
+>(
     user_id: u32,
     incoming_tx: &mpsc::UnboundedSender<WsconnMessage>,
     outgoing_rx: &broadcast::Receiver<IncomingResponse>,
     sub_data: &Arc<SubscriptionData>,
-    cache_args: &CacheArgs,
+    cache_args: &CacheArgs<DB>,
 ) {
     let mut call = format!(
         r#"{{"jsonrpc":"2.0","method":"eth_subscribe","params":["newHeads"],"id":"{}"}}"#,
@@ -193,12 +201,18 @@ async fn send_newheads_sub_message(
 }
 
 /// Subscribe to eth_subscribe("newHeads") and write to NamedBlocknumbers
-pub async fn subscribe_to_new_heads(
+pub async fn subscribe_to_new_heads<
+    DB: GenericDatabase<
+        ReadArgs = Vec<u8>,
+        WriteArgs = (Vec<u8>, InlineArray),
+        ReadReceipt = Option<InlineArray>,
+    >,
+>(
     incoming_tx: mpsc::UnboundedSender<WsconnMessage>,
     outgoing_rx: broadcast::Receiver<IncomingResponse>,
     blocknum_tx: watch::Sender<u64>,
     sub_data: Arc<SubscriptionData>,
-    cache_args: CacheArgs,
+    cache_args: CacheArgs<DB>,
     expected_block_time: u64,
 ) {
     // We basically have to create a new system-only user for subscribing to newHeads

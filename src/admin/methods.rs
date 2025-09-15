@@ -24,7 +24,7 @@ use serde_json::{
 };
 
 /// Extract the method, call the appropriate function and return the response
-pub async fn execute_method<DB: GenericDatabase>(
+pub async fn execute_method<DB: GenericDatabase<FlushArgs = ()>>(
     tx: Value,
     rpc_list: &Arc<RwLock<Vec<Rpc>>>,
     poverty_list: &Arc<RwLock<Vec<Rpc>>>,
@@ -107,7 +107,7 @@ pub async fn execute_method<DB: GenericDatabase>(
 /// Quit Blutgang upon receiving this method
 /// We're returning a Null and allowing unreachable code so rustc doesnt cry
 #[allow(unreachable_code)]
-async fn admin_blutgang_quit<DB: GenericDatabase>(
+async fn admin_blutgang_quit<DB: GenericDatabase<FlushArgs = ()>>(
     cache: RequestBus<DB>,
 ) -> Result<Value, AdminError> {
     // We're doing something not-good so flush everything to disk
@@ -118,7 +118,7 @@ async fn admin_blutgang_quit<DB: GenericDatabase>(
 }
 
 /// Flushes sled cache to disk
-async fn admin_flush_cache<DB: GenericDatabase>(
+async fn admin_flush_cache<DB: GenericDatabase<FlushArgs = ()>>(
     cache: RequestBus<DB>,
 ) -> Result<Value, AdminError> {
     let time = Instant::now();
@@ -392,11 +392,14 @@ fn admin_blutgang_set_ttl(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::system::FANOUT;
     use crate::database_processing;
     use jsonwebtoken::DecodingKey;
     use sled::Config;
     use sled::Db;
     use tokio::sync::mpsc;
+
+    type TestDb = Db<{ FANOUT }>;
 
     // Helper function to create a test RPC list
     fn create_test_rpc_list() -> Arc<RwLock<Vec<Rpc>>> {
@@ -429,7 +432,7 @@ mod tests {
     }
 
     // Helper function to create a test cache
-    fn create_test_cache<DB: GenericDatabase>() -> RequestBus<DB> {
+    fn create_test_cache() -> RequestBus<TestDb> {
         let cache = Config::tmp().unwrap();
         let cache = Db::open_with_config(&cache).unwrap();
         let (db_tx, db_rx) = mpsc::unbounded_channel();

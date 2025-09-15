@@ -97,7 +97,7 @@ macro_rules! get_response {
 }
 
 /// Execute request and construct a HTTP response
-async fn forward_body<DB: GenericDatabase>(
+async fn forward_body<DB: GenericDatabase<FlushArgs = ()>>(
     mut tx: Value,
     rpc_list_rwlock: &Arc<RwLock<Vec<Rpc>>>,
     poverty_list_rwlock: &Arc<RwLock<Vec<Rpc>>>,
@@ -127,7 +127,7 @@ async fn forward_body<DB: GenericDatabase>(
 }
 
 /// Accept admin request, self explanatory
-pub async fn accept_admin_request<DB: GenericDatabase>(
+pub async fn accept_admin_request<DB: GenericDatabase<FlushArgs = ()>>(
     tx: Request<hyper::body::Incoming>,
     rpc_list_rwlock: Arc<RwLock<Vec<Rpc>>>,
     poverty_list_rwlock: Arc<RwLock<Vec<Rpc>>>,
@@ -195,12 +195,17 @@ pub async fn accept_admin_request<DB: GenericDatabase>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::system::FANOUT;
     use crate::database::types::GenericDatabase;
     use crate::database_processing;
     use jsonwebtoken::DecodingKey;
     use sled::Config;
     use sled::Db;
     use tokio::sync::mpsc;
+
+    // TODO: Not sure if we'll continue to use sled for anything
+    // but keeping for now so tests will still pass.
+    type TestDb = Db<{ FANOUT }>;
 
     // Helper function to create a test Settings config
     fn create_test_settings() -> Arc<RwLock<Settings>> {
@@ -211,7 +216,7 @@ mod tests {
     }
 
     // Helper function to create a test cache
-    fn create_test_cache<DB: GenericDatabase>() -> RequestBus<DB> {
+    fn create_test_cache<DB: GenericDatabase>() -> RequestBus<TestDb> {
         let cache = Config::tmp().unwrap();
         let cache = Db::open_with_config(&cache).unwrap();
         let (db_tx, db_rx) = mpsc::unbounded_channel();
@@ -223,7 +228,7 @@ mod tests {
     #[tokio::test]
     async fn test_forward_body() {
         let settings = create_test_settings();
-        let cache = create_test_cache();
+        let cache = create_test_cache::<TestDb>();
         let rpc_list = Arc::new(RwLock::new(vec![]));
         let poverty_list = Arc::new(RwLock::new(vec![]));
 
