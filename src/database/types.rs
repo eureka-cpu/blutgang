@@ -83,6 +83,16 @@ pub enum GenericDatabaseResponse<DB: GenericDatabase> {
     Batch(DB::BatchReceipt),
     Flush(DB::FlushReceipt),
 }
+impl<DB: GenericDatabase> GenericDatabaseResponse<DB> {
+    // TODO: @eureka-cpu -- Just a helper for now to get the inner type, but I really don't like this pattern.
+    #[cfg(test)]
+    pub fn into_read(self) -> DB::ReadReceipt {
+        let Self::Read(read) = self else {
+            panic!("database receipt was not read")
+        };
+        read
+    }
+}
 
 /// Specifies if we are reading or writing to the DB.
 #[derive(Debug)]

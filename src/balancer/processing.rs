@@ -207,7 +207,10 @@ mod tests {
 
         cache_query(&mut rx, method.clone(), tx_hash, &cache_args);
 
-        let cached_value = db_get!(cache_args.cache, tx_hash.as_bytes().to_vec()).unwrap();
+        let cached_value = db_get!(cache_args.cache, tx_hash.as_bytes().to_vec())
+            .unwrap()
+            .unwrap()
+            .into_read();
         assert!(
             cached_value.is_none(),
             "got cached value for transaction that should have failed"

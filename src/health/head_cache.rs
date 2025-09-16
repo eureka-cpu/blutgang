@@ -30,7 +30,7 @@ use tokio_stream::{
 };
 
 /// Check if we need to do a reorg or if a new block has finalized.
-pub async fn manage_cache<DB: GenericDatabase<BatchArgs = Batch>>(
+pub async fn manage_cache<DB: GenericDatabase<BatchArgs = Batch> + 'static>(
     head_cache: &Arc<RwLock<BTreeMap<u64, Vec<String>>>>,
     blocknum_rx: tokio::sync::watch::Receiver<u64>,
     finalized_rx: Arc<tokio::sync::watch::Receiver<u64>>,
@@ -50,7 +50,7 @@ pub async fn manage_cache<DB: GenericDatabase<BatchArgs = Batch>>(
         // remove everything from the last block to the `new_block`
         if new_block <= block_number {
             log_wrn!("Reorg detected!\nRemoving stale entries from the cache.");
-            handle_reorg(head_cache, block_number, new_block, cache.clone())?;
+            handle_reorg(head_cache, block_number, new_block, cache.clone()).await?;
         }
 
         // Check if finalized_stream has changed
@@ -67,9 +67,9 @@ pub async fn manage_cache<DB: GenericDatabase<BatchArgs = Batch>>(
 }
 
 /// We use the head_cache to store keys of querries we made near the tip
-/// If a reorg happens, we need to remove all querries in the reorg range
+/// If a reorg happens, we need to remove all queries in the reorg range
 /// from the sled database.
-fn handle_reorg<DB: GenericDatabase<BatchArgs = Batch>>(
+async fn handle_reorg<DB: GenericDatabase<BatchArgs = Batch>>(
     head_cache: &Arc<RwLock<BTreeMap<u64, Vec<String>>>>,
     block_number: u64,
     new_block: u64,
@@ -79,21 +79,24 @@ fn handle_reorg<DB: GenericDatabase<BatchArgs = Batch>>(
     let mut batch = Batch::default();
 
     // Go over the head cache and get all the keys from block_number to new_block
-    let mut head_cache_guard = head_cache.write().unwrap();
-    for i in block_number..new_block + 1 {
-        if let Some(keys) = head_cache_guard.get(&i) {
-            for key in keys {
-                batch.remove(key.as_bytes());
+    {
+        let mut head_cache_guard = head_cache.write().unwrap();
+        for i in block_number..new_block + 1 {
+            if let Some(keys) = head_cache_guard.get(&i) {
+                for key in keys {
+                    dbg!(&key);
+                    batch.remove(key.as_bytes());
+                }
+                // Remove the entry from the head_cache
+                head_cache_guard.remove(&i);
             }
-            // Remove the entry from the head_cache
-            head_cache_guard.remove(&i);
         }
     }
 
-    // Send the batch to the cache
-    // Dropping unawaited future we don't need.
+    dbg!(&batch);
 
-    drop(db_batch!(cache, batch));
+    // Send the batch to the cache
+    let _ = db_batch!(cache, batch).await;
 
     Ok(())
 }
@@ -157,7 +160,7 @@ mod tests {
         tokio::task::spawn(database_processing(db_rx, cache));
 
         // Call handle_reorg
-        let result = handle_reorg(&head_cache, 2, 3, db_tx.clone());
+        let result = handle_reorg(&head_cache, 2, 3, db_tx.clone()).await;
 
         // Verify the result and check if the data is removed from the cache
         assert!(result.is_ok(), "handle_reorg failed");
@@ -176,14 +179,23 @@ mod tests {
         );
 
         // Check if the data is removed from the cache
-        let key1 = db_get!(db_tx.clone(), "key1".into()).unwrap();
+        let key1 = db_get!(db_tx.clone(), "key1".into())
+            .unwrap()
+            .unwrap()
+            .into_read();
         assert!(key1.is_some(), "failed to get key1 from db");
-        let key2 = db_get!(db_tx.clone(), "key2".into()).unwrap();
+        let key2 = db_get!(db_tx.clone(), "key2".into())
+            .unwrap()
+            .unwrap()
+            .into_read();
         assert!(
             key2.is_none(),
             "successfully got key2 from db which should have failed"
         );
-        let key3 = db_get!(db_tx.clone(), "key3".into()).unwrap();
+        let key3 = db_get!(db_tx.clone(), "key3".into())
+            .unwrap()
+            .unwrap()
+            .into_read();
         assert!(
             key3.is_none(),
             "successfully got key3 from db which should have failed"
