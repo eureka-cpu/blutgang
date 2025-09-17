@@ -99,13 +99,12 @@ pub async fn get_safe_block(
     let (tx, mut rx) = mpsc::channel(len);
 
     // Iterate over all RPCs
-    for i in 0..len {
-        let rpc_clone = rpc_list_clone[i].clone();
+    for rpc in rpc_list_clone.into_iter().take(len) {
         let tx = tx.clone(); // Clone the sender for this RPC
 
         // Spawn a future for each RPC
         let rpc_future = async move {
-            let a = rpc_clone.get_finalized_block();
+            let a = rpc.get_finalized_block();
             let result = timeout(Duration::from_millis(ttl), a).await;
 
             // Handle timeout as 0

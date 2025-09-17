@@ -111,7 +111,7 @@ async fn admin_blutgang_quit<DB: GenericDatabase<FlushArgs = ()>>(
     cache: RequestBus<DB>,
 ) -> Result<Value, AdminError> {
     // We're doing something not-good so flush everything to disk
-    let _ = db_flush!(cache, ());
+    drop(db_flush!(cache, ()));
 
     std::process::exit(0);
     Ok(Value::Null)
@@ -122,7 +122,7 @@ async fn admin_flush_cache<DB: GenericDatabase<FlushArgs = ()>>(
     cache: RequestBus<DB>,
 ) -> Result<Value, AdminError> {
     let time = Instant::now();
-    let _ = db_flush!(cache, ());
+    drop(db_flush!(cache, ()));
     let time = time.elapsed();
 
     let rx = json!({

@@ -161,8 +161,7 @@ async fn head_check(
     let (tx, mut rx) = mpsc::channel(len);
 
     // Iterate over all RPCs
-    for i in 0..len {
-        let rpc_clone = rpc_list_clone[i].clone();
+    for (rpc_list_index, rpc) in rpc_list_clone.into_iter().enumerate().take(len) {
         let tx = tx.clone(); // Clone the sender for this RPC
 
         // Spawn a future for each RPC
@@ -171,8 +170,8 @@ async fn head_check(
 
             // Check the current block number
             let a = async move {
-                let block_number = rpc_clone.block_number().await.unwrap_or(0);
-                let syncing = rpc_clone.syncing().await.unwrap_or(true);
+                let block_number = rpc.block_number().await.unwrap_or(0);
+                let syncing = rpc.syncing().await.unwrap_or(true);
 
                 let rax = InnerResult {
                     is_syncing: syncing,
@@ -197,7 +196,7 @@ async fn head_check(
             };
 
             let head_result = HeadResult {
-                rpc_list_index: i,
+                rpc_list_index,
                 is_syncing: result.is_syncing,
                 reported_head: result.reported_head,
             };

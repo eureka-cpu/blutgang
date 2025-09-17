@@ -24,7 +24,15 @@
           cargoLock = {
             lockFile = ./Cargo.lock;
           };
-          buildInputs = with pkgs; [ gcc pkg-config openssl systemd ];
+          buildInputs = with pkgs; [
+            gcc
+            pkg-config
+            openssl
+            systemd
+            libclang.lib
+            rocksdb
+            rustPlatform.bindgenHook
+          ];
           nativeBuildInputs = with pkgs; [
             gcc
             pkg-config
@@ -34,6 +42,11 @@
               extensions = [ "rust-src" "rustfmt-preview" "rust-analyzer" ];
             })
           ];
+
+          # Used by build.rs in the rocksdb-sys crate. If we don't set these, it would
+          # try to build RocksDB from source.
+          ROCKSDB_LIB_DIR = "${pkgs.rocksdb}/lib";
+
           # This is the only way im aware of to have
           # different build profiles with `buildRustPackage` (:
           preBuild = ''
@@ -53,14 +66,17 @@
         };
 
         devShells.default = pkgs.mkShell {
+          nativeBuildInputs = [ pkgs.pkg-config ];
           buildInputs = with pkgs; [
-            pkg-config
             openssl
             clang
+            libclang.lib
+            rocksdb
             cargo-flamegraph
             python311Packages.requests
             python311Packages.websocket-client
             python3
+            rustPlatform.bindgenHook
             (rust-bin.nightly.latest.default.override {
               extensions = [ "rust-src" "rustfmt-preview" "rust-analyzer" ];
             })
@@ -75,6 +91,10 @@
           ] ++ lib.optionals stdenv.isDarwin [
             darwin.apple_sdk.frameworks.SystemConfiguration
           ];
+
+          # Used by build.rs in the rocksdb-sys crate. If we don't set these, it would
+          # try to build RocksDB from source.
+          ROCKSDB_LIB_DIR = "${pkgs.rocksdb}/lib";
 
           # `jemalloc-sys` build step fails during debug builds due to nix gcc hardening
           hardeningDisable = ["fortify"];

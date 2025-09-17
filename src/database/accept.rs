@@ -15,23 +15,21 @@ pub async fn database_processing<DB: GenericDatabase + std::fmt::Debug>(
     mut rax: mpsc::UnboundedReceiver<DbRequest<DB>>,
     cache: DB,
 ) {
-    loop {
-        while let Some(incoming) = rax.recv().await {
-            let result = match incoming.request {
-                RequestKind::Read(k) => cache.read(k).map(GenericDatabaseResponse::Read),
-                RequestKind::Write(kv) => cache.write(kv).map(GenericDatabaseResponse::Write),
-                RequestKind::Batch(b) => cache.batch(b).map(GenericDatabaseResponse::Batch),
-                RequestKind::Flush(a) => cache.flush(a).map(GenericDatabaseResponse::Flush),
-            };
+    while let Some(incoming) = rax.recv().await {
+        let result = match incoming.request {
+            RequestKind::Read(k) => cache.read(k).map(GenericDatabaseResponse::Read),
+            RequestKind::Write(kv) => cache.write(kv).map(GenericDatabaseResponse::Write),
+            RequestKind::Batch(b) => cache.batch(b).map(GenericDatabaseResponse::Batch),
+            RequestKind::Flush(a) => cache.flush(a).map(GenericDatabaseResponse::Flush),
+        };
 
-            if result.is_err() {
-                log_err!("Db failed to send response back: {:?}", result);
-                let _ = incoming.sender.send(None);
-                continue;
-            }
-
-            let _ = incoming.sender.send(result.ok());
+        if result.is_err() {
+            log_err!("Db failed to send response back: {:?}", result.err());
+            let _ = incoming.sender.send(None);
+            continue;
         }
+
+        let _ = incoming.sender.send(result.ok());
     }
 }
 

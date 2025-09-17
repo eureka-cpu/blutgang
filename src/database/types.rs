@@ -18,17 +18,17 @@ pub type RequestSender<DB> = oneshot::Sender<Option<GenericDatabaseResponse<DB>>
 pub trait GenericDatabase: Send {
     type Error: Debug;
 
-    type ReadArgs: Debug + Send;
-    type ReadReceipt: Debug + Send;
+    type ReadArgs: Send;
+    type ReadReceipt: Send;
 
-    type WriteArgs: Debug + Send;
-    type WriteReceipt: Debug + Send;
+    type WriteArgs: Send;
+    type WriteReceipt: Send;
 
-    type BatchArgs: Debug + Send;
-    type BatchReceipt: Debug + Send;
+    type BatchArgs: Send;
+    type BatchReceipt: Send;
 
-    type FlushArgs: Debug + Send;
-    type FlushReceipt: Debug + Send;
+    type FlushArgs: Send;
+    type FlushReceipt: Send;
 
     /// A database read operation.
     fn read(&self, args: Self::ReadArgs) -> Result<Self::ReadReceipt, Self::Error>;
@@ -76,7 +76,46 @@ impl GenericDatabase for sled::Db<{ crate::FANOUT }> {
     }
 }
 
-#[derive(Debug)]
+// TODO: @eureka-cpu -- These options could be derived from the config, and maybe
+// we should have some struct with generics to avoid the need for cfg everywhere in the future.
+//
+// Also important to note, some operations do behave differently between thread modes, such as
+// column families, and we should have some kind of distinction for this option in the config docs.
+impl<T: rocksdb::ThreadMode + Send> GenericDatabase for rocksdb::DBWithThreadMode<T> {
+    type Error = rocksdb::Error;
+
+    type ReadArgs = (Vec<u8>, rocksdb::ReadOptions);
+    type ReadReceipt = Option<Vec<u8>>;
+
+    type WriteArgs = (Vec<u8>, Vec<u8>, rocksdb::WriteOptions);
+    type WriteReceipt = ();
+
+    type BatchArgs = (rocksdb::WriteBatch, rocksdb::WriteOptions);
+    type BatchReceipt = ();
+
+    type FlushArgs = rocksdb::FlushOptions;
+    type FlushReceipt = ();
+
+    fn read(&self, args: Self::ReadArgs) -> Result<Self::ReadReceipt, Self::Error> {
+        let (key, ref readopts) = args;
+        self.get_opt(key, readopts)
+    }
+
+    fn write(&self, args: Self::WriteArgs) -> Result<Self::WriteReceipt, Self::Error> {
+        let (key, value, ref writeopts) = args;
+        self.put_opt(key, value, writeopts)
+    }
+
+    fn batch(&self, args: Self::BatchArgs) -> Result<Self::BatchReceipt, Self::Error> {
+        let (batch, ref writeopts) = args;
+        self.write_opt(batch, writeopts)
+    }
+
+    fn flush(&self, flushopts: Self::FlushArgs) -> Result<Self::FlushReceipt, Self::Error> {
+        self.flush_opt(&flushopts)
+    }
+}
+
 pub enum GenericDatabaseResponse<DB: GenericDatabase> {
     Read(DB::ReadReceipt),
     Write(DB::WriteReceipt),
@@ -104,7 +143,6 @@ pub enum RequestKind<DB: GenericDatabase> {
 }
 
 /// Contains data to be sent to the DB thread for processing.
-#[derive(Debug)]
 pub struct DbRequest<DB: GenericDatabase> {
     pub request: RequestKind<DB>,
     pub sender: RequestSender<DB>,
