@@ -87,7 +87,6 @@ use hyper_util_blutgang::rt::TokioIo;
 static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 #[tokio::main]
-#[allow(warnings)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get all the cli args and set them
     let config = Arc::new(RwLock::new(Settings::new(create_match()).await));
@@ -206,7 +205,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sub_data = Arc::new(SubscriptionData::new());
     if is_ws {
         let (ws_error_tx, ws_error_rx) = mpsc::unbounded_channel::<WsChannelErr>();
-        let db_tx_clone = db_tx.clone();
 
         let rpc_list_ws = Arc::clone(&rpc_list_rwlock);
         // TODO: make this more ergonomic
