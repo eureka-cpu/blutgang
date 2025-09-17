@@ -3,7 +3,23 @@ use crate::config::system::VERSION_STR;
 use clap::{
     Arg,
     Command,
+    Parser,
 };
+
+#[derive(Debug, Parser)]
+#[command(
+    name = "blutgang",
+    version = VERSION_STR,
+    author = "makemake <vukasin@gostovic.me> and contributors",
+    about = "Blutgang load balancer and cache. For more info read the wiki: https://github.com/rainshowerLabs/blutgang/wiki",
+)]
+pub struct Blutgang {
+    // TODO: @eureka-cpu -- create FromStr impls or use value_parser. In some cases from_args_matches may work better,
+    // see if there is a work around to make the interface simpler.
+    //
+    // #[arg(long, short = 'r', num_args = 1.., conflicts_with = "config", help = "CSV list of rpcs")]
+    // rpc_list: Vec<crate::rpc::types::Rpc>,
+}
 
 pub fn create_match() -> clap::Command {
     Command::new("blutgang")
