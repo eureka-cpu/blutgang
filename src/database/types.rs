@@ -18,6 +18,8 @@ pub type RequestSender<DB> = oneshot::Sender<Option<GenericDatabaseResponse<DB>>
 pub trait GenericDatabase: Send {
     type Error: Debug;
 
+    type Config;
+
     type ReadArgs: Send;
     type ReadReceipt: Send;
 
@@ -29,6 +31,11 @@ pub trait GenericDatabase: Send {
 
     type FlushArgs: Send;
     type FlushReceipt: Send;
+
+    /// Open a database from a config.
+    fn open(config: &Self::Config) -> Result<Self, Self::Error>
+    where
+        Self: Sized;
 
     /// A database read operation.
     fn read(&self, args: Self::ReadArgs) -> Result<Self::ReadReceipt, Self::Error>;
@@ -46,6 +53,8 @@ pub trait GenericDatabase: Send {
 impl GenericDatabase for sled::Db<{ crate::FANOUT }> {
     type Error = std::io::Error;
 
+    type Config = sled::Config;
+
     type ReadArgs = Vec<u8>;
     type ReadReceipt = Option<sled::InlineArray>;
 
@@ -57,6 +66,10 @@ impl GenericDatabase for sled::Db<{ crate::FANOUT }> {
 
     type FlushArgs = ();
     type FlushReceipt = sled::FlushStats;
+
+    fn open(config: &Self::Config) -> Result<Self, Self::Error> {
+        sled::Config::open(config)
+    }
 
     fn read(&self, key: Self::ReadArgs) -> Result<Self::ReadReceipt, Self::Error> {
         self.get(key)
@@ -84,6 +97,8 @@ impl GenericDatabase for sled::Db<{ crate::FANOUT }> {
 impl<T: rocksdb::ThreadMode + Send> GenericDatabase for rocksdb::DBWithThreadMode<T> {
     type Error = rocksdb::Error;
 
+    type Config = (rocksdb::Options, std::path::PathBuf);
+
     type ReadArgs = (Vec<u8>, rocksdb::ReadOptions);
     type ReadReceipt = Option<Vec<u8>>;
 
@@ -95,6 +110,11 @@ impl<T: rocksdb::ThreadMode + Send> GenericDatabase for rocksdb::DBWithThreadMod
 
     type FlushArgs = rocksdb::FlushOptions;
     type FlushReceipt = ();
+
+    fn open(config: &Self::Config) -> Result<Self, Self::Error> {
+        let (opts, path) = config;
+        Self::open(opts, path)
+    }
 
     fn read(&self, args: Self::ReadArgs) -> Result<Self::ReadReceipt, Self::Error> {
         let (key, ref readopts) = args;

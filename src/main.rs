@@ -29,7 +29,10 @@ use crate::{
         system::FANOUT,
         types::Settings,
     },
-    database::accept::database_processing,
+    database::{
+        accept::database_processing,
+        types::GenericDatabase,
+    },
     health::{
         check::{
             dropped_listener,
@@ -106,11 +109,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rpc_list_rwlock = Arc::new(RwLock::new(config.read().unwrap().rpc_list.clone()));
 
     // Create/Open sled DB
-    let cache: Db<{ FANOUT }> = config
-        .read()
-        .unwrap()
-        .sled_config
-        .open()
+    let cache: Db<{ FANOUT }> = GenericDatabase::open(&config.read().unwrap().sled_config)
         .expect("Can't open/create database!");
 
     // Cache for storing querries near the tip
