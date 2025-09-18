@@ -95,6 +95,12 @@ impl Default for Settings {
     }
 }
 
+// TODO: @eureka-cpu -- There are some configuration options which are not present in the command line options.
+// TODO: @eureka-cpu -- It would be better to collect errors using a toml parser crate and log them at the end,
+// instead of using print statements so that the error span is retained.
+// TODO: @eureka-cpu -- Probably we should not be making network calls as part of parsing the config options.
+// This can be done after the fact, WRT creating a poverty list, otherwise we return an error from a function
+// which implies it should only be parsing the configuration or command line options.
 impl Settings {
     pub async fn new(matches: Command) -> Settings {
         let matches = matches.get_matches();
@@ -558,5 +564,19 @@ impl Settings {
             sled_config,
             admin,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // TODO: @eureka-cpu -- See my commend on `Settings` WRT:
+    // This still succeeds in the sandbox because failing to reach a URL just adds an RPC to the poverty list.
+    #[tokio::test]
+    async fn test_default_config() {
+        let config_path =
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("example_config.toml");
+        let config_str =
+            std::fs::read_to_string(&config_path).expect("failed to read example_config.toml");
+        super::Settings::create_from_file(config_str).await;
     }
 }
