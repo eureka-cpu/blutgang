@@ -100,14 +100,19 @@ impl Settings {
         let matches = matches.get_matches();
 
         // Try to open the file at the path specified in the args
-        let path = matches.get_one::<String>("config").unwrap();
+        let path = matches.get_one::<std::path::PathBuf>("config").unwrap();
         let file: Option<String> = match fs::read_to_string(path) {
             Ok(file) => Some(file),
-            Err(_) => panic!("\x1b[31mErr:\x1b[0m Error opening config file at {}", path),
+            Err(_) => {
+                panic!(
+                    "\x1b[31mErr:\x1b[0m Error opening config file at {}",
+                    path.display()
+                )
+            }
         };
 
         if let Some(file) = file {
-            log_info!("Using config file at {}", path);
+            log_info!("Using config file at {}", path.display());
             return Settings::create_from_file(file).await;
         }
 

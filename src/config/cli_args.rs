@@ -40,7 +40,7 @@ pub struct Blutgang {
     cache_capacity: usize,
 
     /// Zstd compression level.
-    #[arg(long)]
+    #[arg(long, required = false)]
     compression: i32,
 
     /// Time in ms to flush the DB.
@@ -88,10 +88,10 @@ pub struct Blutgang {
     readonly: bool,
 
     /// Enable admin comms with JWT.
-    #[arg(long, requires = "token", default_value_t = false)]
+    #[arg(long, required = false, requires = "token", default_value_t = false)]
     jwt: bool,
 
     /// JWT token.
-    #[arg(long, requires = "jwt")]
+    #[arg(long, required = false, requires = "jwt")]
     token: String,
 }
