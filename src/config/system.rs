@@ -12,7 +12,7 @@ pub const MAGIC: u32 = 0xb153;
 pub const FANOUT: usize = 256;
 
 // Version consts, dont impact functionality
-pub const VERSION_STR: &str = "Blutgang 0.4.0 Arianrhod";
+pub const VERSION_STR: &str = "0.4.0 Arianrhod";
 pub const TAGLINE: &str = "`I won't run`";
 
 #[cfg(feature = "journald")]

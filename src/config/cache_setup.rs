@@ -20,11 +20,11 @@ pub fn setup_data(cache: &Db<{ FANOUT }>, do_clear: bool) {
     }
 
     let version_json = format!(
-        "{{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"{}; {}\"}}",
+        "{{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"Blutgang {}; {}\"}}",
         VERSION_STR, TAGLINE
     );
 
-    log_info!("Starting {}", VERSION_STR);
+    log_info!("Starting Blutgang {}", VERSION_STR);
 
     // Insert kv pair `blutgang_is_lb` `true` to know what we're interacting with
     // `blutgang_is_lb` is cached as a blake3 cache
