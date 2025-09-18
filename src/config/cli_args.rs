@@ -1,16 +1,7 @@
-use std::path::PathBuf;
-
-use crate::config::system::VERSION_STR;
-
-use clap::{
-    CommandFactory,
-    Parser,
-};
-
-#[derive(Debug, Parser)]
+#[derive(Debug, clap::Parser)]
 #[command(
     name = "blutgang",
-    version = VERSION_STR,
+    version = crate::config::system::VERSION_STR,
     author = "makemake <vukasin@gostovic.me> and contributors",
     about = "Blutgang load balancer and cache. For more info read the wiki: https://github.com/rainshowerLabs/blutgang/wiki",
 )]
@@ -22,7 +13,7 @@ pub struct Blutgang {
         default_value = "config.toml",
         conflicts_with = "rpc_list"
     )]
-    config: PathBuf,
+    config: std::path::PathBuf,
 
     /// List of RPCs in CSV format (comma separated values).
     #[arg(long, short = 'r', conflicts_with = "config")]
@@ -42,7 +33,7 @@ pub struct Blutgang {
 
     /// Database path.
     #[arg(long, short = 'd', default_value = "blutgang-cache")]
-    db: PathBuf,
+    db: std::path::PathBuf,
 
     /// Capacity of the cache stored in memory in bytes.
     #[arg(long, default_value_t = 1000000000)]
@@ -103,8 +94,4 @@ pub struct Blutgang {
     /// JWT token.
     #[arg(long, requires = "jwt")]
     token: String,
-}
-
-pub fn create_match() -> clap::Command {
-    Blutgang::command()
 }

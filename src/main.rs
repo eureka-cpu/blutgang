@@ -25,7 +25,7 @@ use crate::{
     },
     config::{
         cache_setup::setup_data,
-        cli_args::create_match,
+        cli_args::Blutgang,
         system::FANOUT,
         types::Settings,
     },
@@ -65,6 +65,7 @@ use std::{
     },
 };
 
+use clap::CommandFactory;
 use sled::Db;
 
 use tokio::{
@@ -89,7 +90,7 @@ static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get all the cli args and set them
-    let config = Arc::new(RwLock::new(Settings::new(create_match()).await));
+    let config = Arc::new(RwLock::new(Settings::new(Blutgang::command()).await));
 
     // Copy the configuration values we need
     let (addr, do_clear, do_health_check, admin_enabled, is_ws, expected_block_time) = {
