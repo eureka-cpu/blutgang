@@ -37,15 +37,15 @@ pub struct Blutgang {
 
     /// Capacity of the cache stored in memory in bytes.
     #[arg(long, default_value_t = 1000000000)]
-    cache_capacity: u64,
+    cache_capacity: usize,
 
     /// Zstd compression level.
     #[arg(long)]
-    compression: String,
+    compression: i32,
 
     /// Time in ms to flush the DB.
     #[arg(long, default_value_t = 1000)]
-    flush_every_ms: u32,
+    flush_every_ms: usize,
 
     /// Clear cache.
     #[arg(long, default_value_t = false)]
@@ -57,22 +57,22 @@ pub struct Blutgang {
 
     /// How often to perform the health check.
     #[arg(long, default_value_t = 2000)]
-    health_check_ttl: u32,
+    health_check_ttl: u64,
 
     /// Time for the RPC to respond before we remove it from the active queue.
     #[arg(long, default_value_t = 300)]
-    ttl: u32,
+    ttl: u128,
 
     /// Supress the checking RPC health messages.
-    #[arg(long, default_value_t = false)]
+    #[arg(long, default_value_t = true)]
     supress_rpc_check: bool,
 
     /// Maximum amount of retries before we drop the current request.
     #[arg(long, default_value_t = 32)]
-    max_retries: u64,
+    max_retries: u32,
 
     /// Enable the admin namespace.
-    #[arg(long, default_value_t = false)]
+    #[arg(long, default_value_t = true)]
     admin: bool,
 
     /// Address to listen to for the admin namespace.
@@ -88,8 +88,8 @@ pub struct Blutgang {
     readonly: bool,
 
     /// Enable admin comms with JWT.
-    #[arg(long, requires = "token")]
-    jwt: String,
+    #[arg(long, requires = "token", default_value_t = false)]
+    jwt: bool,
 
     /// JWT token.
     #[arg(long, requires = "jwt")]

@@ -433,12 +433,9 @@ impl Settings {
             delta = 1_000_000 / delta;
         }
 
-        // Turn the rpc_list into a csv vec
-        let rpc_list: Vec<&str> = rpc_list.split(',').collect();
-        let rpc_list: Vec<String> = rpc_list.iter().map(|rpc| rpc.to_string()).collect();
         // Make a list of Rpc structs
         let rpc_list: Vec<Rpc> = rpc_list
-            .iter()
+            .split(',')
             .map(|rpc| Rpc::new(rpc.to_string(), None, 6, delta.into(), ma_length))
             .collect();
 
