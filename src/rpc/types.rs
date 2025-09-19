@@ -117,11 +117,7 @@ impl Rpc {
 
         let response = match self.client.post(&self.url).json(&tx).send().await {
             Ok(response) => response,
-            Err(err) => {
-                return Err(crate::rpc::types::RpcError::InvalidResponse(
-                    err.to_string(),
-                ))
-            }
+            Err(err) => return Err(RpcError::InvalidResponse(err.to_string())),
         };
 
         #[cfg(feature = "debug-verbose")]

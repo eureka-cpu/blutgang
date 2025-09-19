@@ -1,5 +1,8 @@
 use crate::{
-    config::setup::sort_by_latency,
+    config::{
+        error::ConfigError,
+        setup::sort_by_latency,
+    },
     log_info,
     log_wrn,
     Rpc,
@@ -59,6 +62,8 @@ impl Debug for AdminSettings {
 #[derive(Debug, Clone)]
 pub struct Settings {
     pub rpc_list: Vec<Rpc>,
+    pub sort_on_startup: bool,
+    pub ma_length: f64,
     pub poverty_list: Vec<Rpc>,
     pub is_ws: bool,
     pub do_clear: bool,
@@ -78,6 +83,8 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             rpc_list: Vec::new(),
+            sort_on_startup: false,
+            ma_length: 15.0,
             poverty_list: Vec::new(),
             is_ws: true,
             do_clear: false,
@@ -98,11 +105,8 @@ impl Default for Settings {
 // TODO: @eureka-cpu -- There are some configuration options which are not present in the command line options.
 // TODO: @eureka-cpu -- It would be better to collect errors using a toml parser crate and log them at the end,
 // instead of using print statements so that the error span is retained.
-// TODO: @eureka-cpu -- Probably we should not be making network calls as part of parsing the config options.
-// This can be done after the fact, WRT creating a poverty list, otherwise we return an error from a function
-// which implies it should only be parsing the configuration or command line options.
 impl Settings {
-    pub async fn new(matches: Command) -> Settings {
+    pub fn new(matches: Command) -> Result<Settings, ConfigError> {
         let matches = matches.get_matches();
 
         // Try to open the file at the path specified in the args
@@ -119,14 +123,14 @@ impl Settings {
 
         if let Some(file) = file {
             log_info!("Using config file at {}", path.display());
-            return Settings::create_from_file(file).await;
+            return Settings::create_from_file(file);
         }
 
         log_info!("Using command line arguments for settings...");
         Settings::create_from_matches(matches)
     }
 
-    async fn create_from_file(conf_file: String) -> Settings {
+    fn create_from_file(conf_file: String) -> Result<Settings, ConfigError> {
         let parsed_toml = conf_file.parse::<Value>().expect("Error parsing TOML");
 
         // `is_ws` flag is used to turn off WS specific things when a WS endpoint isnt present.
@@ -278,7 +282,11 @@ impl Settings {
 
         let mut rpc_list: Vec<Rpc> = Vec::new();
         for table_name in table_names {
-            if table_name != "blutgang" && table_name != "sled" && table_name != "admin" {
+            if table_name != "blutgang"
+                && table_name != "sled"
+                && table_name != "rocksdb"
+                && table_name != "admin"
+            {
                 let rpc_table = parsed_toml.get(table_name).unwrap().as_table().unwrap();
 
                 let max_consecutive = rpc_table
@@ -393,21 +401,11 @@ impl Settings {
             }
         };
 
-        let mut poverty_list = Vec::new();
-        if sort_on_startup {
-            println!("Sorting RPCs by latency...");
-            (rpc_list, poverty_list) =
-                match sort_by_latency(rpc_list, poverty_list, ma_length).await {
-                    Ok(rax) => rax,
-                    Err(e) => {
-                        panic!("{:?}", e);
-                    }
-                };
-        }
-
-        Settings {
+        Ok(Settings {
             rpc_list,
-            poverty_list,
+            sort_on_startup,
+            ma_length,
+            poverty_list: Vec::new(),
             is_ws,
             do_clear,
             address,
@@ -420,10 +418,10 @@ impl Settings {
             supress_rpc_check,
             sled_config,
             admin,
-        }
+        })
     }
 
-    fn create_from_matches(matches: ArgMatches) -> Settings {
+    fn create_from_matches(matches: ArgMatches) -> Result<Settings, ConfigError> {
         // Build the rpc_list
         let rpc_list: String = matches
             .get_one::<String>("rpc_list")
@@ -550,8 +548,10 @@ impl Settings {
             }
         };
 
-        Settings {
+        Ok(Settings {
             rpc_list,
+            sort_on_startup: false,
+            ma_length,
             poverty_list: Vec::new(),
             is_ws: false,
             do_clear: clear,
@@ -565,20 +565,36 @@ impl Settings {
             health_check_ttl,
             sled_config,
             admin,
-        }
+        })
+    }
+
+    /// Use update syntax to handle sorting RPCs on startup. This avoids doing async work
+    /// while parsing the configuration, deferring to the main thread before starting.
+    pub(crate) async fn sort_on_startup(self) -> Result<Self, ConfigError> {
+        println!("Sorting RPCs by latency...");
+        let len = self.rpc_list.len();
+        let (rpc_list, poverty_list) =
+            sort_by_latency(self.rpc_list, Vec::with_capacity(len), self.ma_length).await?;
+
+        Ok(Self {
+            rpc_list,
+            poverty_list,
+            ..self
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    // TODO: @eureka-cpu -- See my commend on `Settings` WRT:
-    // This still succeeds in the sandbox because failing to reach a URL just adds an RPC to the poverty list.
     #[tokio::test]
     async fn test_default_config() {
         let config_path =
             std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("example_config.toml");
         let config_str =
             std::fs::read_to_string(&config_path).expect("failed to read example_config.toml");
-        super::Settings::create_from_file(config_str).await;
+        assert!(
+            super::Settings::create_from_file(config_str).is_ok(),
+            "failed to parse example_config.toml"
+        );
     }
 }

@@ -90,7 +90,11 @@ static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get all the cli args and set them
-    let config = Arc::new(RwLock::new(Settings::new(Blutgang::command()).await));
+    let mut settings = Settings::new(Blutgang::command())?;
+    if settings.sort_on_startup {
+        settings = settings.sort_on_startup().await?;
+    }
+    let config = Arc::new(RwLock::new(settings));
 
     // Copy the configuration values we need
     let (addr, do_clear, do_health_check, admin_enabled, is_ws, expected_block_time) = {

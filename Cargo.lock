@@ -239,6 +239,7 @@ dependencies = [
  "simd-json",
  "sled",
  "systemd",
+ "thiserror 2.0.16",
  "tikv-jemallocator",
  "tokio",
  "tokio-stream",
