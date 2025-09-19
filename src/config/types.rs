@@ -59,7 +59,13 @@ impl Debug for AdminSettings {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
+pub enum CacheSettings {
+    Sled(sled::Config),
+    RocksDB(rocksdb::Options),
+}
+
+#[derive(Clone)]
 pub struct Settings {
     pub rpc_list: Vec<Rpc>,
     pub sort_on_startup: bool,
@@ -75,7 +81,7 @@ pub struct Settings {
     pub supress_rpc_check: bool,
     pub max_retries: u32,
     pub health_check_ttl: u64,
-    pub sled_config: Config,
+    pub cache: CacheSettings,
     pub admin: AdminSettings,
 }
 
@@ -96,7 +102,7 @@ impl Default for Settings {
             supress_rpc_check: true,
             max_retries: 32,
             health_check_ttl: 1000,
-            sled_config: sled::Config::default(),
+            cache: CacheSettings::Sled(sled::Config::default()),
             admin: AdminSettings::default(),
         }
     }
@@ -431,7 +437,7 @@ impl Settings {
             max_retries,
             health_check_ttl,
             supress_rpc_check,
-            sled_config,
+            cache: CacheSettings::Sled(sled_config),
             admin,
         })
     }
@@ -578,7 +584,7 @@ impl Settings {
             expected_block_time,
             max_retries,
             health_check_ttl,
-            sled_config,
+            cache: CacheSettings::Sled(sled_config),
             admin,
         })
     }

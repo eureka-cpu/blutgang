@@ -30,7 +30,10 @@ use crate::{
             TERM_STYLE,
         },
         system::FANOUT,
-        types::Settings,
+        types::{
+            CacheSettings,
+            Settings,
+        },
     },
     database::{
         accept::database_processing,
@@ -100,7 +103,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = Arc::new(RwLock::new(settings));
 
     // Copy the configuration values we need
-    let (addr, do_clear, do_health_check, admin_enabled, is_ws, expected_block_time) = {
+    let (
+        addr,
+        do_clear,
+        do_health_check,
+        admin_enabled,
+        is_ws,
+        expected_block_time,
+        cache_settings,
+    ) = {
         let config_guard = config.read().unwrap();
         (
             config_guard.address,
@@ -109,15 +120,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             config_guard.admin.enabled,
             config_guard.is_ws,
             config_guard.expected_block_time,
+            config_guard.cache,
         )
     };
 
     // Make the list a rwlock
     let rpc_list_rwlock = Arc::new(RwLock::new(config.read().unwrap().rpc_list.clone()));
 
+    // TODO: @eureka-cpu -- make a run function so we can keep this generic and call it depending on the db backend
     // Create/Open sled DB
-    let cache: Db<{ FANOUT }> = GenericDatabase::open(&config.read().unwrap().sled_config)
-        .expect("Can't open/create database!");
+    match cache_settings {
+        CacheSettings::Sled(sled) => {
+            let cache = <sled::Db<{ FANOUT }> as GenericDatabase>::open(&sled)
+                .expect("Can't open/create database!");
+        }
+        CacheSettings::RocksDB(rocks) => {
+            let cache =
+                <rocksdb::DBWithThreadMode<rocksdb::SingleThreaded> as GenericDatabase>::open(&(
+                    rocks,
+                    std::path::PathBuf::from("./blutgang-cache-rocksdb"),
+                ))
+                .expect("Can't open/create database!");
+        }
+    };
 
     // Cache for storing querries near the tip
     let head_cache = Arc::new(RwLock::new(BTreeMap::<u64, Vec<String>>::new()));

@@ -79,7 +79,7 @@ use std::{
 
 /// `ConnectionParams` contains the necessary data needed for blutgang
 /// to fulfil an incoming request.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ConnectionParams {
     rpc_list: Arc<RwLock<Vec<Rpc>>>,
     channels: RequestChannels,

@@ -20,6 +20,7 @@ const CORE_OPTS: &str = "Core Configuration Options";
 const CACHE_OPTS: &str = "Cache Options";
 const ADMIN_OPTS: &str = "Admin Namespace Options";
 
+// TODO: @eureka-cpu -- Add environment variables
 #[derive(Debug, clap::Parser)]
 #[command(
     name = "blutgang",
