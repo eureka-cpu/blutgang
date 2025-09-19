@@ -15,6 +15,9 @@ pub const FANOUT: usize = 256;
 pub const VERSION_STR: &str = "0.4.0 Arianrhod";
 pub const TAGLINE: &str = "`I won't run`";
 
+// TODO: @eureka-cpu -- we actually don't need to rely on this to get logs into journald
+// and since we are often working in an async runtime, the tracing, tracing_subscriber and tracing_journald
+// crates would be a much more satisfactory option for getting accurate spans.
 #[cfg(feature = "journald")]
 pub fn log_journald(level: u32, message: &str) {
     use systemd::journal;

@@ -1,3 +1,10 @@
+//! Command line options for configuring blutgang.
+//!
+//! The configuration options take precedence in this order: command line, config file, defaults.
+//! If a config file is present, but command line options are also present, the command line
+//! options will override the config file options. If no config file is present, the default
+//! configuration will be used.
+
 #[derive(Debug, clap::Parser)]
 #[command(
     name = "blutgang",
@@ -33,7 +40,7 @@ pub struct Blutgang {
 
     /// Database path.
     #[arg(long, short = 'd', default_value = "blutgang-cache")]
-    db: std::path::PathBuf,
+    db_path: std::path::PathBuf,
 
     /// Capacity of the cache stored in memory in bytes.
     #[arg(long, default_value_t = 1000000000)]
@@ -48,11 +55,11 @@ pub struct Blutgang {
     flush_every_ms: usize,
 
     /// Clear cache.
-    #[arg(long, default_value_t = false)]
+    #[arg(long)]
     clear: bool,
 
     /// Enable health checking.
-    #[arg(long, default_value_t = false)]
+    #[arg(long)]
     health_check: bool,
 
     /// How often to perform the health check.
@@ -64,7 +71,7 @@ pub struct Blutgang {
     ttl: u128,
 
     /// Supress the checking RPC health messages.
-    #[arg(long, default_value_t = true)]
+    #[arg(long)]
     supress_rpc_check: bool,
 
     /// Maximum amount of retries before we drop the current request.
@@ -72,7 +79,7 @@ pub struct Blutgang {
     max_retries: u32,
 
     /// Enable the admin namespace.
-    #[arg(long, default_value_t = true)]
+    #[arg(long)]
     admin: bool,
 
     /// Address to listen to for the admin namespace.
@@ -84,11 +91,11 @@ pub struct Blutgang {
     admin_port: u16,
 
     /// Make the admin namespace be readonly.
-    #[arg(long, default_value_t = false)]
+    #[arg(long)]
     readonly: bool,
 
     /// Enable admin comms with JWT.
-    #[arg(long, required = false, requires = "token", default_value_t = false)]
+    #[arg(long, required = false, requires = "token")]
     jwt: bool,
 
     /// JWT token.

@@ -467,7 +467,9 @@ impl Settings {
             .expect("Invalid address or port!");
 
         // DB options
-        let db_path = matches.get_one::<String>("db").expect("Invalid db path");
+        let db_path = matches
+            .get_one::<String>("db_path")
+            .expect("Invalid db path");
 
         let cache_capacity = matches
             .get_one::<String>("cache_capacity")
