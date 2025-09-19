@@ -84,7 +84,7 @@ impl Default for Settings {
         Self {
             rpc_list: Vec::new(),
             sort_on_startup: false,
-            ma_length: 15.0,
+            ma_length: 100.0,
             poverty_list: Vec::new(),
             is_ws: true,
             do_clear: false,

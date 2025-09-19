@@ -25,7 +25,10 @@ use crate::{
     },
     config::{
         cache_setup::setup_data,
-        cli_args::Blutgang,
+        cli_args::{
+            Blutgang,
+            TERM_STYLE,
+        },
         system::FANOUT,
         types::Settings,
     },
@@ -90,7 +93,7 @@ static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get all the cli args and set them
-    let mut settings = Settings::new(Blutgang::command())?;
+    let mut settings = Settings::new(Blutgang::command().styles(TERM_STYLE))?;
     if settings.sort_on_startup {
         settings = settings.sort_on_startup().await?;
     }

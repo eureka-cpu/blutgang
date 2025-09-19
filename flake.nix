@@ -1,3 +1,8 @@
+# TODO: @eureka-cpu -- Use crane + cachix for incremental artifact caching
+# TODO: @eureka-cpu -- Use fenix for toolchain components from .rust-toolchain.toml
+# TODO: @eureka-cpu -- Add static packages
+# TODO: @eureka-cpu -- Add dockerImage(s)
+# TODO: @eureka-cpu -- Less important, maybe add clap completions to the devShell
 {
   description = "Blutgang - The WD40 of Ethereum load balancers";
 
