@@ -130,15 +130,24 @@ impl Settings {
     }
 
     fn create_from_file(conf_file: String) -> Result<Settings, ConfigError> {
-        let parsed_toml = conf_file.parse::<Value>().expect("Error parsing TOML");
+        let parsed_toml = toml::Spanned::new(
+            0..conf_file.len(),
+            conf_file.parse::<Value>().expect("Error parsing TOML"),
+        );
 
         // `is_ws` flag is used to turn off WS specific things when a WS endpoint isnt present.
         let mut is_ws = true;
 
-        let table_names: Vec<&String> = parsed_toml.as_table().unwrap().keys().collect::<Vec<_>>();
+        let table_names: Vec<&String> = parsed_toml
+            .as_ref()
+            .as_table()
+            .unwrap()
+            .keys()
+            .collect::<Vec<_>>();
 
         // Parse the `blutgang` table
         let blutgang_table = parsed_toml
+            .as_ref()
             .get("blutgang")
             .expect("\x1b[31mErr:\x1b[0m Missing blutgang table!")
             .as_table()
@@ -236,6 +245,7 @@ impl Settings {
 
         // Parse `sled` table
         let sled_table = parsed_toml
+            .as_ref()
             .get("sled")
             .expect("\x1b[31mErr:\x1b[0m Missing sled table!")
             .as_table()
@@ -286,7 +296,12 @@ impl Settings {
                 && table_name != "rocksdb"
                 && table_name != "admin"
             {
-                let rpc_table = parsed_toml.get(table_name).unwrap().as_table().unwrap();
+                let rpc_table = parsed_toml
+                    .as_ref()
+                    .get(table_name)
+                    .unwrap()
+                    .as_table()
+                    .unwrap();
 
                 let max_consecutive = rpc_table
                     .get("max_consecutive")
@@ -345,6 +360,7 @@ impl Settings {
 
         // Admin namespace things
         let admin_table = parsed_toml
+            .as_ref()
             .get("admin")
             .expect("\x1b[31mErr:\x1b[0m Missing admin table!")
             .as_table()

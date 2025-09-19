@@ -104,20 +104,12 @@ pub struct Blutgang {
     db_path: Option<std::path::PathBuf>,
 
     /// Enable the sled database backend.
-    #[arg(long, help_heading = CACHE_OPTS)]
+    #[arg(long, conflicts_with = "rocksdb", help_heading = CACHE_OPTS)]
     sled: bool,
 
-    /// Capacity of the cache stored in memory in bytes.
-    #[arg(long, help_heading = CACHE_OPTS)]
-    sled_cache_capacity: Option<usize>,
-
-    /// Zstd compression level.
-    #[arg(long, help_heading = CACHE_OPTS)]
-    sled_compression: Option<i32>,
-
-    /// Time in ms to flush the DB.
-    #[arg(long, help_heading = CACHE_OPTS)]
-    sled_flush_every_ms: Option<usize>,
+    /// Enable the rocksdb database backend.
+    #[arg(long, conflicts_with = "sled", help_heading = CACHE_OPTS)]
+    rocksdb: bool,
 
     // -- Admin Namespace Options
     //
