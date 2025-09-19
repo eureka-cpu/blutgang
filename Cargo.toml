@@ -14,6 +14,8 @@ categories = ["command-line-utilities"]
 [dependencies]
 thiserror = "2"
 clap = { version = "4.5", features = ["derive", "env"] }
+codespan-reporting = "0.12"
+toml = "0.8"
 hyper = { version = "1.4.1", features = ["server", "http1"] }
 http-body-util = "0.1.0-rc.3"
 reqwest = { version = "0.11.18", features = ["blocking", "json"] }
@@ -45,7 +47,6 @@ tokio = { version = "1.28.1", features = [
 url = "2.4.0"
 blake3 = "1.4.1"
 tikv-jemallocator = "0.6.0"
-toml = "0.7.6"
 memchr = "2.5.0"
 rand = { version = "0.8.5" }
 chrono = "0.4.28"

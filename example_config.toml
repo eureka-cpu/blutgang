@@ -52,6 +52,7 @@ key = ""
 
 # Sled config
 # Sled is one of the databases we use for our cache, for more info check their docs
+# https://docs.rs/sled/1.0.0-alpha.124/sled/struct.Config.html
 [blutgang.db.sled]
 # Enable sled as the database used for caching
 enable = true
@@ -69,6 +70,7 @@ flush_every_ms = 12000
 # 
 # RocksDB config
 # RocksDB is one of the databases we use for our cache, for more info check their docs
+# https://github.com/facebook/rocksdb/wiki/RocksDB-Tuning-Guide
 [blutgang.db.rocksdb]
 # Enable rocksdb as the database used for caching
 enable = false

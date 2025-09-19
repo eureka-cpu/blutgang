@@ -102,7 +102,6 @@ impl Default for Settings {
     }
 }
 
-// TODO: @eureka-cpu -- There are some configuration options which are not present in the command line options.
 // TODO: @eureka-cpu -- It would be better to collect errors using a toml parser crate and log them at the end,
 // instead of using print statements so that the error span is retained.
 impl Settings {
